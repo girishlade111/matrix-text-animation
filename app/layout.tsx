@@ -2,12 +2,12 @@ import type { Metadata } from 'next'
 import { GeistSans } from 'geist/font/sans'
 import { GeistMono } from 'geist/font/mono'
 import { Analytics } from '@vercel/analytics/next'
+import { ThemeProvider } from '@/components/theme-provider'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'v0 App',
-  description: 'Created with v0',
-  generator: 'v0.app',
+  title: 'Matrix Text Animation',
+  description: 'A Matrix-style text reveal effect — letters flicker as glowing binary digits, then resolve into the final text. Built with Next.js, Motion, and Tailwind CSS.',
 }
 
 export default function RootLayout({
@@ -27,7 +27,9 @@ html {
         `}</style>
       </head>
       <body>
-        {children}
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+          {children}
+        </ThemeProvider>
         <Analytics />
       </body>
     </html>

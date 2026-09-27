@@ -48,7 +48,7 @@ https://github.com/girishlade111/matrix-text-animation
 
 | Layer | Technology | Version |
 |---|---|---|
-| Framework | Next.js (App Router) | 15.2.4 |
+| Framework | Next.js (App Router) | 15.5.9 |
 | UI | React | 19 |
 | Language | TypeScript (strict) | 5 |
 | Animation | Motion (`motion/react`) | latest |
@@ -89,7 +89,7 @@ Open http://localhost:3000. No `.env` file, no database, no setup wizard — it 
 ├── components/
 │   ├── kokonutui/
 │   │   └── matrix-text.tsx   # ★ The animation component
-│   └── theme-provider.tsx    # next-themes wrapper (optional, currently unused)
+│   └── theme-provider.tsx    # next-themes wrapper (wired into layout.tsx)
 ├── lib/
 │   └── utils.ts          # cn() — clsx + tailwind-merge class merging
 ├── public/               # Static assets
@@ -159,7 +159,7 @@ Full audit (used vs. installed, versions, privacy surface) in [`docs/THIRD_PARTY
 - **Color:** edit the `matrix` variant in `components/kokonutui/matrix-text.tsx` (`color: "#00ff00"` + `textShadow`).
 - **Charset:** `getRandomChar()` returns `1`/`0` — swap in katakana or hex for a denser Matrix feel.
 - **Replay:** remount via `key` — `<MatrixText key={run} … />` and bump `run` on click.
-- **Dark mode toggle:** mount `components/theme-provider.tsx` in `layout.tsx` (`<ThemeProvider attribute="class">`) and add a toggle.
+- **Dark mode:** `ThemeProvider` is wired in `layout.tsx` — OS dark mode works out of the box (add a toggle UI if you want manual control).
 
 More recipes in the Developer Guide.
 
@@ -171,18 +171,16 @@ pnpm build && pnpm start
 
 - **Vercel:** import the repo, deploy with defaults. Analytics activates automatically.
 - **Any Node host:** `pnpm build` → `pnpm start` (`PORT=` to override 3000).
-- **Static hosts:** add `output: 'export'` to `next.config.mjs` for a fully static build.
+- **Static hosts:** `output: 'export'` is already set — `next build` emits static `out/` for Netlify / Cloudflare Pages / GitHub Pages.
 - **Docker:** use Next.js `output: 'standalone'` for a minimal image.
 
 ## Known Quirks
 
-- `styles/globals.css` duplicates `app/globals.css` and is imported nowhere — safe to delete.
-- `components/theme-provider.tsx` is defined but never mounted in `layout.tsx`.
-- `package.json` name is still `my-v0-project` — rename it.
 - `public/` contains only placeholder images.
-- `next.config.mjs` ignores ESLint/TS errors at build time — remove for strict CI.
+- `public/` contains only placeholder images.
+- No ESLint config ships with the repo (`next lint` prompts interactively); `ignoreDuringBuilds: true` is set.
 
-(Details in `docs/DEVELOPER_GUIDE.md` §8.)
+(Fixed 2026-09-27: `styles/globals.css` duplicate deleted, metadata corrected, package renamed, strict TypeScript build enabled, motion variants made explicit, unmount timer leak fixed, `text` prop changes restart the animation. Details in `docs/DEVELOPER_GUIDE.md` §8.)
 
 ## Roadmap Ideas
 

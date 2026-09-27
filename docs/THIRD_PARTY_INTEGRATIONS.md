@@ -32,30 +32,9 @@ Every external service, library, and platform this project touches — what is *
 
 ---
 
-## B. Installed but NOT used in code (template baggage)
+## B. Pruned in the 2026-09-27 audit (were template baggage)
 
-v0 scaffolds include the full shadcn/Radix ecosystem whether the app uses it or not. All of these are in `package.json` but imported **nowhere** in `app/`, `components/`, or `lib/`:
-
-| Package | What it is | Keep if… |
-|---|---|---|
-| `@radix-ui/react-*` (25 packages) | Unstyled accessible primitives (dialog, dropdown, tabs…) | you add shadcn UI components |
-| `next-themes@^0.4.4` | Dark-mode theming | you wire up `components/theme-provider.tsx` (currently unused — dead code) |
-| `lucide-react` | Icon library | you add icons (shadcn default) |
-| `class-variance-authority` | Variant-based component styling | you build shadcn-style components |
-| `tailwindcss-animate` | Animation utilities | already wired as a Tailwind plugin; keep |
-| `autoprefixer` | PostCSS vendor prefixes | safe to remove — not in `postcss.config.mjs`, Tailwind handles it |
-| `react-hook-form` + `@hookform/resolvers` + `zod` | Forms + validation | you add forms |
-| `cmdk` | Command palette | you add ⌘K search |
-| `sonner` | Toasts | you add notifications |
-| `vaul` | Drawer component | you add mobile drawers |
-| `embla-carousel-react` | Carousels | you add carousels |
-| `recharts` | Charts | you add dashboards |
-| `react-day-picker` + `date-fns` | Date picking | you add date inputs |
-| `input-otp` | OTP inputs | you add OTP flows |
-| `react-resizable-panels` | Resizable layouts | you add IDE-like panels |
-| `@emotion/is-prop-valid` | Prop filtering | transitive dep — leave alone |
-
-**Recommendation:** If this stays a single-animation showcase, you can safely prune section B down to `tailwindcss-animate` and cut ~1–2 MB from `node_modules` plus install time. If you plan to grow it into a full app, keep them — they're the standard shadcn stack and `components.json` is already configured for them.
+v0 scaffolds include the full shadcn/Radix ecosystem whether the app uses it or not. These were in `package.json` but imported **nowhere** in `app/`, `components/`, or `lib/`, so they were removed: `@radix-ui/react-*` (25 packages), `lucide-react`, `class-variance-authority`, `react-hook-form` + `@hookform/resolvers` + `zod`, `cmdk`, `sonner`, `vaul`, `embla-carousel-react`, `recharts`, `react-day-picker` + `date-fns`, `input-otp`, `react-resizable-panels`, `@emotion/is-prop-valid`. Pruning cut the `pnpm audit --prod` findings from 59 to 34 (the remainder are Next.js/PostCSS advisories not applicable to a static export). If you later add shadcn UI components, reinstall the pieces you need.
 
 ---
 

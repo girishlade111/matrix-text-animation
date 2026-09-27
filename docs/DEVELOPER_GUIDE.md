@@ -34,7 +34,7 @@ matrix-text-animation/
 ├── components/
 │   ├── kokonutui/
 │   │   └── matrix-text.tsx   # ★ The animation component
-│   └── theme-provider.tsx    # next-themes wrapper (currently unused)
+│   └── theme-provider.tsx    # next-themes wrapper (wired into layout.tsx)
 ├── lib/
 │   └── utils.ts          # cn() — clsx + tailwind-merge
 ├── styles/
@@ -82,16 +82,17 @@ The text `"HelloWorld!"` appears letter by letter; each letter first flickers as
 
 ### How it works (internals)
 
-1. **State:** `letters: LetterState[]` — one entry per character: `{ char, isMatrix, isSpace }`. `isAnimating` guards against double-starts (React StrictMode double-invokes effects in dev).
-2. **Kickoff:** `useEffect` fires `startAnimation` after `initialDelay`.
+1. **State:** `letters: LetterState[]` — one entry per character: `{ char, isMatrix, isSpace }`. A `isAnimatingRef` ref (not state) guards against double-starts.
+2. **Kickoff:** a `useEffect` resets the letters, then fires `startAnimation` after `initialDelay`. The effect re-runs whenever `text` or timing props change, so changing the `text` prop replays the animation from scratch.
 3. **Sequencer:** `startAnimation` walks an index pointer; every `letterInterval` ms it calls `animateLetter(i)`.
 4. **`animateLetter(i)`:**
    - Inside `requestAnimationFrame`, sets `letters[i]` to a random `1`/`0` with `isMatrix: true` (spaces skipped).
    - After `letterAnimationDuration`, restores the true character with `isMatrix: false`.
-5. **Rendering:** each letter is a `<motion.div>` keyed `` `${index}-${letter.char}` `` — **the key change on every char swap forces a remount**, which is what makes the flicker feel sharp rather than a smooth morph.
-   - `animate={letter.isMatrix ? "matrix" : "normal"}` with variants: `matrix` = green + glow. (`initial`/`normal` variants are commented out, so non-matrix letters simply render unstyled — Motion ignores missing variant names gracefully.)
+5. **Timer hygiene:** every `setTimeout` goes through a `later()` wrapper that tracks IDs in a ref; the effect cleanup clears all pending timers — no `setState` after unmount, no leaks.
+6. **Rendering:** each letter is a `<motion.div>` keyed `` `${index}-${letter.char}` `` — **the key change on every char swap forces a remount**, which is what makes the flicker feel sharp rather than a smooth morph.
+   - `animate={letter.isMatrix ? "matrix" : "normal"}` with variants: `matrix` = green + glow; `initial`/`normal` are intentional no-ops so the base look stays owned by CSS (`text-black dark:text-white`).
    - Fixed `w-[1ch]` + `font-mono` + `tabular-nums` keeps every glyph the same width so the text doesn't jitter as characters change.
-6. **Accessibility:** wrapper has `aria-label="Matrix text animation"`.
+7. **Accessibility:** wrapper has `aria-label="Matrix text animation"`.
 
 ### Performance notes
 
@@ -132,7 +133,7 @@ const [run, setRun] = useState(0)
 ```
 (Remounting resets all state — simplest replay mechanism.)
 
-**Dark-mode page background:** the wrapper uses `text-black dark:text-white` with `.dark` class strategy. Wire `components/theme-provider.tsx` into `layout.tsx` and add a theme toggle to make it functional (see §8).
+**Dark-mode page background:** the wrapper uses `text-black dark:text-white` with `.dark` class strategy. `components/theme-provider.tsx` is wired into `layout.tsx` (`attribute="class"`, system default), so OS dark mode works out of the box.
 
 ---
 
@@ -157,14 +158,13 @@ This scaffolds `components/ui/button.tsx` using the `@/` aliases and lucide icon
 
 ## 8. Known quirks & cleanup opportunities
 
-1. **`styles/globals.css` is a duplicate** of `app/globals.css` and imported nowhere — v0 artifact. Safe to delete.
-2. **`components/theme-provider.tsx` is dead code** — defined but never used in `layout.tsx`. Either wire it up (`<ThemeProvider attribute="class" …>` around `{children}`) or delete it with `next-themes`.
-3. **Commented-out variants** in `matrix-text.tsx` (`initial`, `normal`) — harmless (Motion ignores them), but tidy up if you touch the file.
-4. **`useEffect(..., [])` with `startAnimation` omitted from deps** — intentional-ish (run once); `next lint` would flag it, but `next.config.mjs` skips ESLint during builds.
-5. **`typescript.ignoreBuildErrors: true`** — fine for prototyping; remove for production CI so type errors actually fail the build.
-6. **`public/` holds only placeholder images** (`placeholder-logo.*`, `placeholder-user.jpg`, `placeholder.jpg`) — replace or delete before shipping.
-7. **`package.json` name is `my-v0-project`** — rename to `matrix-text-animation`.
-8. **Old README referenced another user's v0/Vercel URLs** — replaced by the new README in this docs pass.
+1. ~~**`components/theme-provider.tsx` is dead code**~~ — wired into `layout.tsx` in the 2026-09-27 audit (system dark mode now functional).
+2. **`public/` holds only placeholder images** (`placeholder-logo.*`, `placeholder-user.jpg`, `placeholder.jpg`) — replace or delete before shipping.
+3. **ESLint has no config** — `next.config.mjs` sets `ignoreDuringBuilds: true` and the repo ships no eslint config, so `next lint` prompts interactively. Add a flat `eslint.config.mjs` if you want lint in CI.
+4. **`motion` and `@emotion/is-prop-valid` are pinned** (were `"latest"`) — keep them pinned for reproducible installs.
+5. **Unused dependency baggage** (Radix set, react-hook-form, recharts, …) is installed but imported nowhere — prune if this stays a single-animation showcase (see `docs/THIRD_PARTY_INTEGRATIONS.md`).
+
+Fixed in the 2026-09-27 audit: `styles/globals.css` duplicate deleted; metadata (`title`/`description`) corrected; `package.json` name fixed; `typescript.ignoreBuildErrors` removed (build is now strict); motion variants defined explicitly (incl. transparent textShadow start/end so Motion interpolates the glow without warnings); unmount timer leak fixed; `text` prop changes now restart the animation; stale-rAF guard for shortened text; `next` upgraded 15.2.4 → 15.5.9 (patches critical flight-protocol RCE GHSA-9qr9-h5gf-34mp); ~40 unused v0/Radix deps pruned (59 → 34 audit findings, remainder not applicable to static export); `ThemeProvider` wired; `output: 'export'` enabled — the app is now a fully static site deployable to any static host.
 
 ---
 
@@ -176,7 +176,7 @@ pnpm build && pnpm start
 
 - **Vercel (recommended):** import repo → defaults work → no env vars needed. Analytics activates automatically.
 - **Any Node host:** `pnpm build` → `pnpm start` (port `3000`, override with `PORT=`).
-- **Static hosts (Netlify, Cloudflare Pages, GitHub Pages):** `images.unoptimized: true` is already set, so `next build` output can be served statically; for a fully static export add `output: 'export'` to `next.config.mjs` (note: `<Analytics />` still renders harmlessly).
+- **Static hosts (Netlify, Cloudflare Pages, GitHub Pages):** `output: 'export'` is set in `next.config.mjs`, so `next build` emits a static `out/` directory — deployed to Cloudflare Pages (note: `<Analytics />` still renders harmlessly).
 - **Docker:** standard Next.js standalone pattern works; set `output: 'standalone'` if you want the minimal image.
 
 ## 10. Troubleshooting
