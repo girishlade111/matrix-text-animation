@@ -193,3 +193,7 @@ pnpm build && pnpm start
 ## License
 
 No license file is specified yet. Add one (`MIT`, `Apache-2.0`, …) before public distribution if you want others to reuse the code.
+
+---
+
+Built with ❤ by [Girish Lade](https://github.com/girishlade111) — [ladestack.in](https://ladestack.in)
